@@ -5,6 +5,10 @@ import urllib
 
 import requests
 
+BASE_URL = "https://exp.host/"
+# BASE_URL = "http://localhost:3000/"
+BASE_API_URL = BASE_URL + "--/api/"
+
 class Push(object):
     """Push Notifications"""
 
@@ -20,21 +24,23 @@ class Client(object):
     def publish(self, exponentPushToken=None, message="", data={}):
         """Sends a push notification with the given options and data"""
 
-        response = requests.post("https://exp.host/--/api/notify/" + urllib.quote_plus(json.dumps([{
-            'exponentPushToken': exponentPushToken,
-            'message': message,
-        }])), data=json.dumps(data), headers={
-            'Content-Type': 'application/json',
-        })
+        #response = requests.post("https://exp.host/--/api/notify/" + urllib.quote_plus(json.dumps({
+        response = requests.post(BASE_API_URL + "notify/" + json.dumps([{
+            "exponentPushToken": exponentPushToken,
+            "message": message,
+        }]),
+            data=json.dumps(data),
+            headers={
+                'Content-Type': 'application/json',
+            }
+        )
 
         if response.status_code == 400:
-            err = InvalidPushTokenError(exponentPushToken)
-            err.response = response
-            raise err
-
-        return response
+            raise InvalidPushTokenError("Token: %s" % exponentPushToken, response)
 
 class InvalidPushTokenError(Exception):
     """Raised when a push token is not a valid ExponentPushToken"""
 
-    pass
+    def __init__(self, message, response):
+        self.message = message
+        self.response = response
