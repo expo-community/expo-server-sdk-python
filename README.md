@@ -1,2 +1,3 @@
 # exponent-server-sdk-python
-Exponent Server SDK
+
+Use to send push notifications to Exponent Experiences from a Python server.
