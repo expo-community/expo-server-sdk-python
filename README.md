@@ -1,5 +1,13 @@
 # exponent-server-sdk-python
 
+## Installation
+
+```
+pip install exponent_server_sdk
+```
+
+## Usage
+
 Use to send push notifications to Exponent Experiences from a Python server.
 
 [Full documentation](https://docs.getexponent.com/versions/v13.0.0/guides/push-notifications.html#http-2-api) on the API is available if you want to dive into the details.
