@@ -1,4 +1,4 @@
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 from collections import namedtuple
 import json
@@ -226,7 +226,7 @@ class PushClient(object):
         # Delayed import because this file is immediately read on install, and
         # the requests library may not be installed yet.
         import requests
-        
+
         response = requests.post(
             self.host + self.api_url + '/push/send',
             data=json.dumps([pm.get_payload() for pm in push_messages]),
