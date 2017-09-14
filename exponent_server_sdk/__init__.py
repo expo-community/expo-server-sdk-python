@@ -204,7 +204,7 @@ class PushClient(object):
     def is_exponent_push_token(cls, token):
         """Returns `True` if the token is an Exponent push token"""
 
-        return (type(token) is str) and token.startswith('ExponentPushToken')
+        return isinstance(token, basestring) and token.startswith('ExponentPushToken')
 
     def _publish_internal(self, push_messages):
         """Send push notifications
