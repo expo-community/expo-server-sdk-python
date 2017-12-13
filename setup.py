@@ -26,6 +26,7 @@ setup(
     license='MIT',
     install_requires=[
         'requests',
+        'six',
     ],
     packages=find_packages(),
     zip_safe=False

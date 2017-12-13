@@ -2,6 +2,7 @@ __version__ = '0.1.2'
 
 from collections import namedtuple
 import json
+import six
 
 
 class PushResponseError(Exception):
@@ -204,7 +205,9 @@ class PushClient(object):
     def is_exponent_push_token(cls, token):
         """Returns `True` if the token is an Exponent push token"""
 
-        return isinstance(token, basestring) and token.startswith('ExponentPushToken')
+        return (
+            isinstance(token, six.string_types) and
+            token.startswith('ExponentPushToken'))
 
     def _publish_internal(self, push_messages):
         """Send push notifications
