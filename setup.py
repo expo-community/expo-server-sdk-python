@@ -17,7 +17,7 @@ except IOError:
 
 setup(
     name='exponent_server_sdk',
-    version='0.0.14',
+    version='0.1.4',
     description='Exponent Server SDK for Python',
     long_description=README,
     url='https://github.com/exponent/exponent-server-sdk-python',
