@@ -1,6 +1,5 @@
 from collections import namedtuple
 import json
-import six
 
 
 class PushResponseError(Exception):
@@ -202,7 +201,8 @@ class PushClient(object):
     @classmethod
     def is_exponent_push_token(cls, token):
         """Returns `True` if the token is an Exponent push token"""
-
+        import six
+        
         return (
             isinstance(token, six.string_types) and
             token.startswith('ExponentPushToken'))
