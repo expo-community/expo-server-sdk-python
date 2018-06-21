@@ -63,7 +63,7 @@ class PushServerError(Exception):
 
 class PushMessage(namedtuple('PushMessage', [
         'to', 'data', 'title', 'body', 'sound', 'ttl', 'expiration',
-        'priority', 'badge'])):
+        'priority', 'badge', 'channel_id'])):
     """An object that describes a push notification request.
 
     You can override this class to provide your own custom validation before
@@ -90,6 +90,9 @@ class PushMessage(namedtuple('PushMessage', [
                 and 'high' are the only valid values.
             badge: An integer representing the unread notification count. This
                 currently only affects iOS. Specify 0 to clear the badge count.
+            channel_id: ID of the Notification Channel through which to display
+                this notification
+   * on Android devices.
     """
     def get_payload(self):
         # Sanity check for invalid push token format.
@@ -118,6 +121,9 @@ class PushMessage(namedtuple('PushMessage', [
             payload['priority'] = self.priority
         if self.badge is not None:
             payload['badge'] = self.badge
+        if self.channel_id is not None:
+            payload['channel_id'] = self.channel_id
+
         return payload
 
 
@@ -202,7 +208,7 @@ class PushClient(object):
     def is_exponent_push_token(cls, token):
         """Returns `True` if the token is an Exponent push token"""
         import six
-        
+
         return (
             isinstance(token, six.string_types) and
             token.startswith('ExponentPushToken'))
