@@ -92,7 +92,7 @@ class PushMessage(namedtuple('PushMessage', [
                 currently only affects iOS. Specify 0 to clear the badge count.
             channel_id: ID of the Notification Channel through which to display
                 this notification on Android devices.
-                  
+
     """
     def get_payload(self):
         # Sanity check for invalid push token format.
@@ -183,7 +183,7 @@ class PushResponse(namedtuple('PushResponse', [
 class PushClient(object):
     """Exponent push client
 
-    See full API docs at https://docs.getexponent.com/versions/v13.0.0/guides/push-notifications.html#http-2-api
+    See full API docs at https://docs.expo.io/versions/latest/guides/push-notifications.html#http2-api
     """
     DEFAULT_HOST = "https://exp.host"
     DEFAULT_BASE_API_URL = "/--/api/v2"
@@ -207,7 +207,7 @@ class PushClient(object):
     def is_exponent_push_token(cls, token):
         """Returns `True` if the token is an Exponent push token"""
         import six
-        
+
         return (
             isinstance(token, six.string_types) and
             token.startswith('ExponentPushToken'))
