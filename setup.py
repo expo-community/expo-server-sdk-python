@@ -17,11 +17,11 @@ except IOError:
 
 setup(
     name='exponent_server_sdk',
-    version='0.1.4',
-    description='Exponent Server SDK for Python',
+    version='0.2.0',
+    description='Expo Server SDK for Python',
     long_description=README,
-    url='https://github.com/exponent/exponent-server-sdk-python',
-    author='Exponent Team',
+    url='https://github.com/expo/exponent-server-sdk-python',
+    author='Expo Team',
     author_email='exponent.team@gmail.com',
     license='MIT',
     install_requires=[
