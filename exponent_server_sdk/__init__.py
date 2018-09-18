@@ -1,5 +1,6 @@
 from collections import namedtuple
 import json
+import itertools
 
 
 class PushResponseError(Exception):
@@ -187,8 +188,9 @@ class PushClient(object):
     """
     DEFAULT_HOST = "https://exp.host"
     DEFAULT_BASE_API_URL = "/--/api/v2"
+    DEFAULT_MAX_MESSAGE_COUNT = 100
 
-    def __init__(self, host=None, api_url=None):
+    def __init__(self, host=None, api_url=None, max_message_count=None):
         """Construct a new PushClient object.
 
         Args:
@@ -202,6 +204,10 @@ class PushClient(object):
         self.api_url = api_url
         if not self.api_url:
             self.api_url = PushClient.DEFAULT_BASE_API_URL
+
+        self.max_message_count = max_message_count
+        if not self.max_message_count:
+            self.max_message_count = PushClient.DEFAULT_MAX_MESSAGE_COUNT
 
     @classmethod
     def is_exponent_push_token(cls, token):
@@ -316,4 +322,13 @@ class PushClient(object):
         Returns:
            An array of PushResponse objects which contains the results.
         """
-        return self._publish_internal(push_messages)
+        start = 0
+        receipts = []
+        while True:
+            chunk = list(itertools.islice(push_messages, start,
+                                          start + self.max_message_count))
+            start += self.max_message_count
+            if not chunk:
+                break
+            receipts.extend(self._publish_internal(chunk))
+        return receipts
