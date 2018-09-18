@@ -322,12 +322,10 @@ class PushClient(object):
         Returns:
            An array of PushResponse objects which contains the results.
         """
-        start = 0
         receipts = []
-        while True:
+        for start in itertools.count(0, self.max_message_count):
             chunk = list(itertools.islice(push_messages, start,
                                           start + self.max_message_count))
-            start += self.max_message_count
             if not chunk:
                 break
             receipts.extend(self._publish_internal(chunk))
