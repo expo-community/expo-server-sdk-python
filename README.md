@@ -1,6 +1,6 @@
 # exponent-server-sdk-python
 
-If you have problems with the code in this repository, please file issues & bug reports at https://github.com/expo/expo. Thanks!
+This repo is maintained by Expo's awesome community :heart_eyes:! So, if you have problems with the code in this repository, please feel free to open an issue, and make a PR. Thanks!
 
 ## Installation
 
