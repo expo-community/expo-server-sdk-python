@@ -133,7 +133,7 @@ PushMessage.__new__.__defaults__ = (None,) * len(PushMessage._fields)
 
 
 class PushResponse(namedtuple('PushResponse', [
-        'push_message', 'status', 'message', 'details'])):
+        'push_message', 'status', 'message', 'details', 'id'])):
     """Wrapper class for a push notification response.
 
     A successful single push notification:
@@ -292,7 +292,8 @@ class PushClient(object):
                 # If there is no status, assume error.
                 status=receipt.get('status', PushResponse.ERROR_STATUS),
                 message=receipt.get('message', ''),
-                details=receipt.get('details', None)))
+                details=receipt.get('details', None),
+                id=receipt.get('id', '')))
 
         return receipts
 
