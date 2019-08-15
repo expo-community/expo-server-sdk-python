@@ -63,7 +63,7 @@ class PushServerError(Exception):
 
 class PushMessage(namedtuple('PushMessage', [
         'to', 'data', 'title', 'body', 'sound', 'ttl', 'expiration',
-        'priority', 'badge', 'channel_id'])):
+        'priority', 'badge', 'channel_id', '_category'])):
     """An object that describes a push notification request.
 
     You can override this class to provide your own custom validation before
@@ -92,6 +92,7 @@ class PushMessage(namedtuple('PushMessage', [
                 currently only affects iOS. Specify 0 to clear the badge count.
             channel_id: ID of the Notification Channel through which to display
                 this notification on Android devices.
+            _category: Notification category.
 
     """
     def get_payload(self):
@@ -123,6 +124,8 @@ class PushMessage(namedtuple('PushMessage', [
             payload['badge'] = self.badge
         if self.channel_id is not None:
             payload['channelId'] = self.channel_id
+        if self._category is not None:
+            payload['_category'] = self._category
         return payload
 
 
