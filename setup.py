@@ -20,6 +20,7 @@ setup(
     version='0.3.0',
     description='Expo Server SDK for Python',
     long_description=README,
+    long_description_content_type='text/markdown',
     url='https://github.com/expo/exponent-server-sdk-python',
     author='Expo Team',
     author_email='exponent.team@gmail.com',
