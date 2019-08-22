@@ -63,7 +63,7 @@ class PushServerError(Exception):
 
 class PushMessage(namedtuple('PushMessage', [
         'to', 'data', 'title', 'body', 'sound', 'ttl', 'expiration',
-        'priority', 'badge', 'category', '_display_in_foreground', 'channel_id'])):
+        'priority', 'badge', '_category', '_display_in_foreground', 'channel_id'])):
     """An object that describes a push notification request.
 
     You can override this class to provide your own custom validation before
@@ -90,7 +90,7 @@ class PushMessage(namedtuple('PushMessage', [
                 and 'high' are the only valid values.
             badge: An integer representing the unread notification count. This
                 currently only affects iOS. Specify 0 to clear the badge count.
-            category: ID of the Notification Category through which to display
+            _category: ID of the Notification Category through which to display
                  this notification.
             channel_id: ID of the Notification Channel through which to display
                 this notification on Android devices.
@@ -125,8 +125,8 @@ class PushMessage(namedtuple('PushMessage', [
             payload['priority'] = self.priority
         if self.badge is not None:
             payload['badge'] = self.badge
-        if self.category is not None:
-            payload['category'] = self.category
+        if self._category is not None:
+            payload['_category'] = self._category
         if self._display_in_foreground is not None:
             payload['_displayInForeground'] = self._display_in_foreground
         if self.channel_id is not None:
