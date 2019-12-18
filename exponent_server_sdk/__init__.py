@@ -196,7 +196,7 @@ class PushClient(object):
     DEFAULT_HOST = "https://exp.host"
     DEFAULT_BASE_API_URL = "/--/api/v2"
 
-    def __init__(self, host=None, api_url=None):
+    def __init__(self, host=None, api_url=None, **kwargs):
         """Construct a new PushClient object.
 
         Args:
@@ -241,6 +241,8 @@ class PushClient(object):
         # the requests library may not be installed yet.
         import requests
 
+        timeout = self.kwargs['timeout'] if 'timeout' in self.kwargs else None
+
         response = requests.post(
             self.host + self.api_url + '/push/send',
             data=json.dumps([pm.get_payload() for pm in push_messages]),
@@ -248,7 +250,8 @@ class PushClient(object):
                 'accept': 'application/json',
                 'accept-encoding': 'gzip, deflate',
                 'content-type': 'application/json',
-            }
+            },
+            timeout=timeout
         )
 
         # Let's validate the response format first.
