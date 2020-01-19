@@ -16,13 +16,14 @@ Use to send push notifications to Exponent Experiences from a Python server.
 
 Here's an example on how to use this with retries and reporting via [pyrollbar](https://github.com/rollbar/pyrollbar).
 ```python
-from exponent_server_sdk import DeviceNotRegisteredError
-from exponent_server_sdk import PushClient
-from exponent_server_sdk import PushMessage
-from exponent_server_sdk import PushResponseError
-from exponent_server_sdk import PushServerError
-from requests.exceptions import ConnectionError
-from requests.exceptions import HTTPError
+from exponent_server_sdk import (
+    DeviceNotRegisteredError,
+    PushClient,
+    PushMessage,
+    PushResponseError,
+    PushServerError,
+) 
+from requests.exceptions import ConnectionError, HTTPError
 
 
 # Basic arguments. You should extend this function with the push features you
