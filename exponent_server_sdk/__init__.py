@@ -274,6 +274,60 @@ class PushClient(object):
         return (isinstance(token, six.string_types)
                 and token.startswith('ExponentPushToken'))
 
+    def _validate_response(self, response):
+        """Validate the response format"""
+        try:
+            response_data = response.json()
+        except ValueError:
+            # The response isn't json. First, let's attempt to raise a normal
+            # http error. If it's a 200, then we'll raise our own error.
+            response.raise_for_status()
+
+            raise PushServerError('Invalid server response', response)
+
+        # If there are errors with the entire request, raise an error now.
+        if 'errors' in response_data:
+            raise PushServerError('Request failed',
+                                  response,
+                                  response_data=response_data,
+                                  errors=response_data['errors'])
+
+        # We expect the response to have a 'data' field with the responses.
+        if 'data' not in response_data:
+            raise PushServerError('Invalid server response',
+                                  response,
+                                  response_data=response_data)
+
+        # Use the requests library's built-in exceptions for any remaining 4xx
+        # and 5xx errors.
+        response.raise_for_status()
+
+        return response_data
+
+    def _sanity_response_check(self, push_messages, response_data, response):
+        """Sanity check the response"""
+        if len(push_messages) != len(response_data['data']):
+            raise PushServerError(
+                ('Mismatched response length. Expected %d %s but only '
+                 'received %d' %
+                 (len(push_messages), 'receipt' if len(push_messages) == 1 else
+                  'receipts', len(response_data['data']))),
+                response,
+                response_data=response_data)
+
+    def _parse_publish_response(self, response_data, push_messages):
+        receipts = []
+        for i, receipt in enumerate(response_data['data']):
+            receipts.append(
+                PushResponse(
+                    push_message=push_messages[i],
+                    # If there is no status, assume error.
+                    status=receipt.get('status', PushResponse.ERROR_STATUS),
+                    message=receipt.get('message', ''),
+                    details=receipt.get('details', None),
+                    id=receipt.get('id', '')))
+        return receipts
+
     def _publish_internal(self, push_messages):
         """Send push notifications
 
@@ -306,54 +360,14 @@ class PushClient(object):
             timeout=self.timeout)
 
         # Let's validate the response format first.
-        try:
-            response_data = response.json()
-        except ValueError:
-            # The response isn't json. First, let's attempt to raise a normal
-            # http error. If it's a 200, then we'll raise our own error.
-            response.raise_for_status()
-
-            raise PushServerError('Invalid server response', response)
-
-        # If there are errors with the entire request, raise an error now.
-        if 'errors' in response_data:
-            raise PushServerError('Request failed',
-                                  response,
-                                  response_data=response_data,
-                                  errors=response_data['errors'])
-
-        # We expect the response to have a 'data' field with the responses.
-        if 'data' not in response_data:
-            raise PushServerError('Invalid server response',
-                                  response,
-                                  response_data=response_data)
-
-        # Use the requests library's built-in exceptions for any remaining 4xx
-        # and 5xx errors.
-        response.raise_for_status()
+        response_data = self._validate_response(response)
 
         # Sanity check the response
-        if len(push_messages) != len(response_data['data']):
-            raise PushServerError(
-                ('Mismatched response length. Expected %d %s but only '
-                 'received %d' %
-                 (len(push_messages), 'receipt' if len(push_messages) == 1 else
-                  'receipts', len(response_data['data']))),
-                response,
-                response_data=response_data)
+        self._sanity_response_check(push_messages, response_data, response)
 
         # At this point, we know it's a 200 and the response format is correct.
         # Now let's parse the responses per push notification.
-        receipts = []
-        for i, receipt in enumerate(response_data['data']):
-            receipts.append(
-                PushResponse(
-                    push_message=push_messages[i],
-                    # If there is no status, assume error.
-                    status=receipt.get('status', PushResponse.ERROR_STATUS),
-                    message=receipt.get('message', ''),
-                    details=receipt.get('details', None),
-                    id=receipt.get('id', '')))
+        receipts = self._parse_publish_response(response_data, push_messages)
 
         return receipts
 
@@ -387,6 +401,18 @@ class PushClient(object):
             receipts.extend(self._publish_internal(chunk))
         return receipts
 
+    def _parse_receipts_response(self, response_data):
+        response_data = response_data['data']
+        ret = []
+        for r_id, val in response_data.items():
+            ret.append(
+                PushResponse(push_message=PushMessage(),
+                             status=val.get('status', PushResponse.ERROR_STATUS),
+                             message=val.get('message', ''),
+                             details=val.get('details', None),
+                             id=r_id))
+        return ret
+
     def check_receipts(self, receipts):
         # Delayed import because this file is immediately read on install, and
         # the requests library may not be installed yet.
@@ -400,42 +426,97 @@ class PushClient(object):
                 'content-type': 'application/json',
             },
             timeout=self.timeout)
+
         # Let's validate the response format first.
-        try:
-            response_data = response.json()
-        except ValueError:
-            # The response isn't json. First, let's attempt to raise a normal
-            # http error. If it's a 200, then we'll raise our own error.
-            response.raise_for_status()
-            raise PushServerError('Invalid server response', response)
-
-        # If there are errors with the entire request, raise an error now.
-        if 'errors' in response_data:
-            raise PushServerError('Request failed',
-                                  response,
-                                  response_data=response_data,
-                                  errors=response_data['errors'])
-
-        # We expect the response to have a 'data' field with the responses.
-        if 'data' not in response_data:
-            raise PushServerError('Invalid server response',
-                                  response,
-                                  response_data=response_data)
-
-        # Use the requests library's built-in exceptions for any remaining 4xx
-        # and 5xx errors.
-        response.raise_for_status()
+        response_data = self._validate_response(response)
 
         # At this point, we know it's a 200 and the response format is correct.
         # Now let's parse the responses per push notification.
-        response_data = response_data['data']
-        ret = []
-        for r_id, val in response_data.items():
-            ret.append(
-                PushResponse(push_message=PushMessage(),
-                             status=val.get('status',
-                                            PushResponse.ERROR_STATUS),
-                             message=val.get('message', ''),
-                             details=val.get('details', None),
-                             id=r_id))
+        ret = self._parse_receipts_response(response_data)
+        return ret
+
+
+class AsyncPushClient(PushClient):
+
+    async def _publish_internal(self, push_messages):
+        """Send push notifications
+        The server will validate any type of syntax errors and the client will
+        raise the proper exceptions for the user to handle.
+        Each notification is of the form:
+        {
+          'to': 'ExponentPushToken[xxx]',
+          'body': 'This text gets display in the notification',
+          'badge': 1,
+          'data': {'any': 'json object'},
+        }
+        Args:
+            push_messages: An array of PushMessage objects.
+        """
+        # Delayed import because this file is immediately read on install, and
+        # the httpx library may not be installed yet.
+        import httpx
+
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                self.host + self.api_url + '/push/send',
+                data=json.dumps([pm.get_payload() for pm in push_messages]),
+                headers={
+                    'accept': 'application/json',
+                    'accept-encoding': 'gzip, deflate',
+                    'content-type': 'application/json',
+                },
+                timeout=self.timeout)
+
+        # Let's validate the response format first.
+        response_data = self._validate_response(response)
+
+        # Sanity check the response
+        self._sanity_response_check(push_messages, response_data, response)
+
+        # At this point, we know it's a 200 and the response format is correct.
+        # Now let's parse the responses per push notification.
+        receipts = self._parse_publish_response(response_data, push_messages)
+
+        return receipts
+
+    async def publish(self, push_message):
+        """Sends a single push notification
+        Args:
+            push_message: A single PushMessage object.
+        Returns:
+           A PushResponse object which contains the results.
+        """
+        return await self.publish_multiple([push_message])[0]
+
+    async def publish_multiple(self, push_messages):
+        """Sends multiple push notifications at once
+        Args:
+            push_messages: An array of PushMessage objects.
+        Returns:
+           An array of PushResponse objects which contains the results.
+        """
+        return await self._publish_internal(push_messages)
+
+    async def check_receipts(self, receipts):
+        # Delayed import because this file is immediately read on install, and
+        # the httpx library may not be installed yet.
+        import httpx
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                self.host + self.api_url + '/push/getReceipts',
+                data=json.dumps({'ids': [receipt.id for receipt in receipts]}),
+                headers={
+                    'accept': 'application/json',
+                    'accept-encoding': 'gzip, deflate',
+                    'content-type': 'application/json',
+                },
+                timeout=self.timeout)
+
+        # Let's validate the response format first.
+        response_data = self._validate_response(response)
+
+        # At this point, we know it's a 200 and the response format is correct.
+        # Now let's parse the responses per push notification.
+        ret = self._parse_receipts_response(response_data)
+
         return ret
