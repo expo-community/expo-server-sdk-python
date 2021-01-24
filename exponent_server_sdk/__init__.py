@@ -204,7 +204,9 @@ class PushResponse(
         raise PushResponseError(self)
 
 
-class PushReceiptResponse(object):
+class PushReceiptResponse(
+            namedtuple('PushReceiptResponse',
+                   ['id', 'status', 'message', 'details'])):    
     """Wrapper class for a PushReceipt response. Similar to a PushResponse
 
     A successful single push notification:
@@ -241,13 +243,13 @@ class PushReceiptResponse(object):
         if self.details:
             error = self.details.get('error', None)
 
-            if error == PushResponse.ERROR_DEVICE_NOT_REGISTERED:
+            if error == PushReceiptResponse.ERROR_DEVICE_NOT_REGISTERED:
                 raise DeviceNotRegisteredError(self)
-            elif error == PushResponse.ERROR_MESSAGE_TOO_BIG:
+            elif error == PushReceiptResponse.ERROR_MESSAGE_TOO_BIG:
                 raise MessageTooBigError(self)
-            elif error == PushResponse.ERROR_MESSAGE_RATE_EXCEEDED:
+            elif error == PushReceiptResponse.ERROR_MESSAGE_RATE_EXCEEDED:
                 raise MessageRateExceededError(self)
-            elif error == PushResponse.INVALID_CREDENTIALS:
+            elif error == PushReceiptResponse.INVALID_CREDENTIALS:
                 raise InvalidCredentialsError(self)
 
         # No known error information, so let's raise a generic error.
