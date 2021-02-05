@@ -39,6 +39,19 @@ class MessageRateExceededError(PushResponseError):
     pass
 
 
+class InvalidCredentialsError(PushResponseError):
+    """Raised when our push notification credentials for your standalone app 
+    are invalid (ex: you may have revoked them).
+
+    Run expo build:ios -c to regenerate new push notification credentials for
+    iOS. If you revoke an APN key, all apps that rely on that key will no
+    longer be able to send or receive push notifications until you upload a
+    new key to replace it. Uploading a new APN key will not change your users'
+    Expo Push Tokens.
+    """
+    pass
+
+
 class PushServerError(Exception):
     """Raised when the push token server is not behaving as expected
 
@@ -191,7 +204,9 @@ class PushResponse(
         raise PushResponseError(self)
 
 
-class PushReceiptResponse(object):
+class PushReceiptResponse(
+            namedtuple('PushReceiptResponse',
+                   ['id', 'status', 'message', 'details'])):    
     """Wrapper class for a PushReceipt response. Similar to a PushResponse
 
     A successful single push notification:
@@ -209,6 +224,7 @@ class PushReceiptResponse(object):
     ERROR_DEVICE_NOT_REGISTERED = 'DeviceNotRegistered'
     ERROR_MESSAGE_TOO_BIG = 'MessageTooBig'
     ERROR_MESSAGE_RATE_EXCEEDED = 'MessageRateExceeded'
+    INVALID_CREDENTIALS = 'InvalidCredentials'
 
     def is_success(self):
         """Returns True if this push notification successfully sent."""
@@ -227,12 +243,14 @@ class PushReceiptResponse(object):
         if self.details:
             error = self.details.get('error', None)
 
-            if error == PushResponse.ERROR_DEVICE_NOT_REGISTERED:
+            if error == PushReceiptResponse.ERROR_DEVICE_NOT_REGISTERED:
                 raise DeviceNotRegisteredError(self)
-            elif error == PushResponse.ERROR_MESSAGE_TOO_BIG:
+            elif error == PushReceiptResponse.ERROR_MESSAGE_TOO_BIG:
                 raise MessageTooBigError(self)
-            elif error == PushResponse.ERROR_MESSAGE_RATE_EXCEEDED:
+            elif error == PushReceiptResponse.ERROR_MESSAGE_RATE_EXCEEDED:
                 raise MessageRateExceededError(self)
+            elif error == PushReceiptResponse.INVALID_CREDENTIALS:
+                raise InvalidCredentialsError(self)
 
         # No known error information, so let's raise a generic error.
         raise PushResponseError(self)
