@@ -157,7 +157,7 @@ class PushMessage(
 # a required argument at the constructor level right now.
 PushMessage.__new__.__defaults__ = (None, ) * len(PushMessage._fields)
 
-# rename PushResponse to PushTicket
+
 class PushTicket(
         namedtuple('PushTicket',
                    ['push_message', 'status', 'message', 'details', 'id'])):
@@ -206,10 +206,9 @@ class PushTicket(
         # No known error information, so let's raise a generic error.
         raise PushTicketError(self)
 
-# ? rename PushReceiptResponse to PushReceipt
 
-class PushReceiptResponse(
-    namedtuple('PushReceiptResponse',
+class PushReceipt(
+    namedtuple('PushReceipt',
                ['id', 'status', 'message', 'details'])):
     """Wrapper class for a PushReceipt response. Similar to a PushResponse
 
@@ -232,7 +231,7 @@ class PushReceiptResponse(
 
     def is_success(self):
         """Returns True if this push notification successfully sent."""
-        return self.status == PushReceiptResponse.SUCCESS_STATUS
+        return self.status == PushReceipt.SUCCESS_STATUS
 
     def validate_response(self):
         """Raises an exception if there was an error. Otherwise, do nothing.
@@ -247,13 +246,13 @@ class PushReceiptResponse(
         if self.details:
             error = self.details.get('error', None)
 
-            if error == PushReceiptResponse.ERROR_DEVICE_NOT_REGISTERED:
+            if error == PushReceipt.ERROR_DEVICE_NOT_REGISTERED:
                 raise DeviceNotRegisteredError(self)
-            elif error == PushReceiptResponse.ERROR_MESSAGE_TOO_BIG:
+            elif error == PushReceipt.ERROR_MESSAGE_TOO_BIG:
                 raise MessageTooBigError(self)
-            elif error == PushReceiptResponse.ERROR_MESSAGE_RATE_EXCEEDED:
+            elif error == PushReceipt.ERROR_MESSAGE_RATE_EXCEEDED:
                 raise MessageRateExceededError(self)
-            elif error == PushReceiptResponse.INVALID_CREDENTIALS:
+            elif error == PushReceipt.INVALID_CREDENTIALS:
                 raise InvalidCredentialsError(self)
 
         # No known error information, so let's raise a generic error.
@@ -410,13 +409,14 @@ class PushClient(object):
         return push_tickets
 
     def check_receipts(self, push_tickets):
-        '''  Checks the push receipts of all the push tickets'''
+        """  Checks the push receipts of the given push tickets """
         # Delayed import because this file is immediately read on install, and
         # the requests library may not be installed yet.
         import requests
         response = requests.post(
             self.host + self.api_url + '/push/getReceipts',
-            data=json.dumps({'ids': [push_ticket.id for push_ticket in push_tickets]}),
+            data=json.dumps(
+                {'ids': [push_ticket.id for push_ticket in push_tickets]}),
             headers={
                 'accept': 'application/json',
                 'accept-encoding': 'gzip, deflate',
@@ -450,15 +450,15 @@ class PushClient(object):
         response.raise_for_status()
 
         # At this point, we know it's a 200 and the response format is correct.
-        # Now let's parse the responses per push notification.
+        # Now let's parse the responses(push receipts) per push notification.
         response_data = response_data['data']
         ret = []
         for r_id, val in response_data.items():
             ret.append(
-                PushReceiptResponse(push_message=PushMessage(),
-                             status=val.get('status',
-                                            PushReceiptResponse.ERROR_STATUS),
-                             message=val.get('message', ''),
-                             details=val.get('details', None),
-                             id=r_id))
+                PushReceipt(push_message=PushMessage(),
+                            status=val.get('status',
+                                           PushReceipt.ERROR_STATUS),
+                            message=val.get('message', ''),
+                            details=val.get('details', None),
+                            id=r_id))
         return ret
