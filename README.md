@@ -61,7 +61,7 @@ def send_push_message(token, message, extra=None):
         # Mark the push token as inactive
         from notifications.models import PushToken
         PushToken.objects.filter(token=token).update(active=False)
-    except PushResponseError as exc:
+    except PushTicketError as exc:
         # Encountered some other per-notification error.
         rollbar.report_exc_info(
             extra_data={
