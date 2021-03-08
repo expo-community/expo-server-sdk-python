@@ -7,6 +7,7 @@
 
 ## 1.0.2 - 2020-03-07
 - Renamed variables / classes to confirm with the expo documentation
+- This version will require code modifications (renaming of some classes)
 
 ## 1.0.1 - 2020-02-15
 - Add support for push receipt InvalidCredentials error
