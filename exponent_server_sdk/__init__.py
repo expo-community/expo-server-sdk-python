@@ -450,14 +450,14 @@ class PushClient(object):
         response.raise_for_status()
 
         # At this point, we know it's a 200 and the response format is correct.
-        # Now let's parse the responses(push receipts) per push notification.
+        # Now let's parse the responses per push notification.
         response_data = response_data['data']
         ret = []
         for r_id, val in response_data.items():
             ret.append(
-                PushReceipt(push_message=PushMessage(),
+                PushTicket(push_message=PushMessage(),
                             status=val.get('status',
-                                           PushReceipt.ERROR_STATUS),
+                                           PushTicket.ERROR_STATUS),
                             message=val.get('message', ''),
                             details=val.get('details', None),
                             id=r_id))
