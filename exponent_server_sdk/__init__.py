@@ -3,19 +3,20 @@ import json
 import itertools
 
 
-class PushResponseError(Exception):
-    """Base class for all push reponse errors"""
+class PushTicketError(Exception):
+    """Base class for all push ticket errors"""
+
     def __init__(self, push_response):
         if push_response.message:
             self.message = push_response.message
         else:
-            self.message = 'Unknown push response error'
-        super(PushResponseError, self).__init__(self.message)
+            self.message = 'Unknown push ticket error'
+        super(PushTicketError, self).__init__(self.message)
 
         self.push_response = push_response
 
 
-class DeviceNotRegisteredError(PushResponseError):
+class DeviceNotRegisteredError(PushTicketError):
     """Raised when the push token is invalid
 
     To handle this error, you should stop sending messages to this token.
@@ -23,7 +24,7 @@ class DeviceNotRegisteredError(PushResponseError):
     pass
 
 
-class MessageTooBigError(PushResponseError):
+class MessageTooBigError(PushTicketError):
     """Raised when the notification was too large.
 
     On Android and iOS, the total payload must be at most 4096 bytes.
@@ -31,7 +32,7 @@ class MessageTooBigError(PushResponseError):
     pass
 
 
-class MessageRateExceededError(PushResponseError):
+class MessageRateExceededError(PushTicketError):
     """Raised when you are sending messages too frequently to a device
 
     You should implement exponential backoff and slowly retry sending messages.
@@ -39,7 +40,7 @@ class MessageRateExceededError(PushResponseError):
     pass
 
 
-class InvalidCredentialsError(PushResponseError):
+class InvalidCredentialsError(PushTicketError):
     """Raised when our push notification credentials for your standalone app 
     are invalid (ex: you may have revoked them).
 
@@ -65,6 +66,7 @@ class PushServerError(Exception):
       }
     ]}
     """
+
     def __init__(self, message, response, response_data=None, errors=None):
         self.message = message
         self.response = response
@@ -113,6 +115,7 @@ class PushMessage(
                 foregrounded. Defaults to `false`.
 
     """
+
     def get_payload(self):
         # Sanity check for invalid push token format.
         if not PushClient.is_exponent_push_token(self.to):
@@ -155,8 +158,8 @@ class PushMessage(
 PushMessage.__new__.__defaults__ = (None, ) * len(PushMessage._fields)
 
 
-class PushResponse(
-        namedtuple('PushResponse',
+class PushTicket(
+        namedtuple('PushTicket',
                    ['push_message', 'status', 'message', 'details', 'id'])):
     """Wrapper class for a push notification response.
 
@@ -178,7 +181,7 @@ class PushResponse(
 
     def is_success(self):
         """Returns True if this push notification successfully sent."""
-        return self.status == PushResponse.SUCCESS_STATUS
+        return self.status == PushTicket.SUCCESS_STATUS
 
     def validate_response(self):
         """Raises an exception if there was an error. Otherwise, do nothing.
@@ -193,20 +196,20 @@ class PushResponse(
         if self.details:
             error = self.details.get('error', None)
 
-            if error == PushResponse.ERROR_DEVICE_NOT_REGISTERED:
+            if error == PushTicket.ERROR_DEVICE_NOT_REGISTERED:
                 raise DeviceNotRegisteredError(self)
-            elif error == PushResponse.ERROR_MESSAGE_TOO_BIG:
+            elif error == PushTicket.ERROR_MESSAGE_TOO_BIG:
                 raise MessageTooBigError(self)
-            elif error == PushResponse.ERROR_MESSAGE_RATE_EXCEEDED:
+            elif error == PushTicket.ERROR_MESSAGE_RATE_EXCEEDED:
                 raise MessageRateExceededError(self)
 
         # No known error information, so let's raise a generic error.
-        raise PushResponseError(self)
+        raise PushTicketError(self)
 
 
-class PushReceiptResponse(
-            namedtuple('PushReceiptResponse',
-                   ['id', 'status', 'message', 'details'])):    
+class PushReceipt(
+    namedtuple('PushReceipt',
+               ['id', 'status', 'message', 'details'])):
     """Wrapper class for a PushReceipt response. Similar to a PushResponse
 
     A successful single push notification:
@@ -228,7 +231,7 @@ class PushReceiptResponse(
 
     def is_success(self):
         """Returns True if this push notification successfully sent."""
-        return self.status == PushReceiptResponse.SUCCESS_STATUS
+        return self.status == PushReceipt.SUCCESS_STATUS
 
     def validate_response(self):
         """Raises an exception if there was an error. Otherwise, do nothing.
@@ -243,17 +246,17 @@ class PushReceiptResponse(
         if self.details:
             error = self.details.get('error', None)
 
-            if error == PushReceiptResponse.ERROR_DEVICE_NOT_REGISTERED:
+            if error == PushReceipt.ERROR_DEVICE_NOT_REGISTERED:
                 raise DeviceNotRegisteredError(self)
-            elif error == PushReceiptResponse.ERROR_MESSAGE_TOO_BIG:
+            elif error == PushReceipt.ERROR_MESSAGE_TOO_BIG:
                 raise MessageTooBigError(self)
-            elif error == PushReceiptResponse.ERROR_MESSAGE_RATE_EXCEEDED:
+            elif error == PushReceipt.ERROR_MESSAGE_RATE_EXCEEDED:
                 raise MessageRateExceededError(self)
-            elif error == PushReceiptResponse.INVALID_CREDENTIALS:
+            elif error == PushReceipt.INVALID_CREDENTIALS:
                 raise InvalidCredentialsError(self)
 
         # No known error information, so let's raise a generic error.
-        raise PushResponseError(self)
+        raise PushTicketError(self)
 
 
 class PushClient(object):
@@ -361,19 +364,19 @@ class PushClient(object):
                 response_data=response_data)
 
         # At this point, we know it's a 200 and the response format is correct.
-        # Now let's parse the responses per push notification.
-        receipts = []
-        for i, receipt in enumerate(response_data['data']):
-            receipts.append(
-                PushResponse(
+        # Now let's parse the responses(push_tickets) per push notification.
+        push_tickets = []
+        for i, push_ticket in enumerate(response_data['data']):
+            push_tickets.append(
+                PushTicket(
                     push_message=push_messages[i],
                     # If there is no status, assume error.
-                    status=receipt.get('status', PushResponse.ERROR_STATUS),
-                    message=receipt.get('message', ''),
-                    details=receipt.get('details', None),
-                    id=receipt.get('id', '')))
+                    status=push_ticket.get('status', PushTicket.ERROR_STATUS),
+                    message=push_ticket.get('message', ''),
+                    details=push_ticket.get('details', None),
+                    id=push_ticket.get('id', '')))
 
-        return receipts
+        return push_tickets
 
     def publish(self, push_message):
         """Sends a single push notification
@@ -382,7 +385,7 @@ class PushClient(object):
             push_message: A single PushMessage object.
 
         Returns:
-           A PushResponse object which contains the results.
+           A PushTicket object which contains the results.
         """
         return self.publish_multiple([push_message])[0]
 
@@ -393,25 +396,27 @@ class PushClient(object):
             push_messages: An array of PushMessage objects.
 
         Returns:
-           An array of PushResponse objects which contains the results.
+           An array of PushTicket objects which contains the results.
         """
-        receipts = []
+        push_tickets = []
         for start in itertools.count(0, self.max_message_count):
             chunk = list(
                 itertools.islice(push_messages, start,
                                  start + self.max_message_count))
             if not chunk:
                 break
-            receipts.extend(self._publish_internal(chunk))
-        return receipts
+            push_tickets.extend(self._publish_internal(chunk))
+        return push_tickets
 
-    def check_receipts(self, receipts):
+    def check_receipts(self, push_tickets):
+        """  Checks the push receipts of the given push tickets """
         # Delayed import because this file is immediately read on install, and
         # the requests library may not be installed yet.
         import requests
         response = requests.post(
             self.host + self.api_url + '/push/getReceipts',
-            data=json.dumps({'ids': [receipt.id for receipt in receipts]}),
+            data=json.dumps(
+                {'ids': [push_ticket.id for push_ticket in push_tickets]}),
             headers={
                 'accept': 'application/json',
                 'accept-encoding': 'gzip, deflate',
@@ -445,15 +450,15 @@ class PushClient(object):
         response.raise_for_status()
 
         # At this point, we know it's a 200 and the response format is correct.
-        # Now let's parse the responses per push notification.
+        # Now let's parse the responses(push receipts) per push notification.
         response_data = response_data['data']
         ret = []
         for r_id, val in response_data.items():
             ret.append(
-                PushResponse(push_message=PushMessage(),
-                             status=val.get('status',
-                                            PushResponse.ERROR_STATUS),
-                             message=val.get('message', ''),
-                             details=val.get('details', None),
-                             id=r_id))
+                PushReceipt(push_message=PushMessage(),
+                            status=val.get('status',
+                                           PushReceipt.ERROR_STATUS),
+                            message=val.get('message', ''),
+                            details=val.get('details', None),
+                            id=r_id))
         return ret
