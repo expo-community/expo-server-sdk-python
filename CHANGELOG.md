@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+## 1.0.3 - 2020-03-08
+- Fixed typo in previous release causing crash sending push tickets
+
 ## 1.0.2 - 2020-03-07
 - Renamed variables / classes to confirm with the expo documentation
 
