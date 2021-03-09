@@ -20,7 +20,7 @@ from exponent_server_sdk import (
     DeviceNotRegisteredError,
     PushClient,
     PushMessage,
-    PushResponseError,
+    PushTicketError,
     PushServerError,
 ) 
 from requests.exceptions import ConnectionError, HTTPError
