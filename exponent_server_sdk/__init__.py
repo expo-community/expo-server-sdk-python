@@ -1,11 +1,11 @@
 from collections import namedtuple
 import json
 import itertools
+import requests
 
 
 class PushTicketError(Exception):
     """Base class for all push ticket errors"""
-
     def __init__(self, push_response):
         if push_response.message:
             self.message = push_response.message
@@ -66,7 +66,6 @@ class PushServerError(Exception):
       }
     ]}
     """
-
     def __init__(self, message, response, response_data=None, errors=None):
         self.message = message
         self.response = response
@@ -79,7 +78,7 @@ class PushMessage(
         namedtuple('PushMessage', [
             'to', 'data', 'title', 'body', 'sound', 'ttl', 'expiration',
             'priority', 'badge', 'category', 'display_in_foreground',
-            'channel_id'
+            'channel_id', 'subtitle', 'mutable_content'
         ])):
     """An object that describes a push notification request.
 
@@ -112,10 +111,14 @@ class PushMessage(
             channel_id: ID of the Notification Channel through which to display
                 this notification on Android devices.
             display_in_foreground: Displays the notification when the app is
-                foregrounded. Defaults to `false`.
+                foregrounded. Defaults to `false`. No longer available?
+            subtitle: The subtitle to display in the notification below the 
+                title (iOS only).
+            mutable_content: Specifies whether this notification can be 
+                intercepted by the client app. In Expo Go, defaults to true.
+                In standalone and bare apps, defaults to false. (iOS Only)
 
     """
-
     def get_payload(self):
         # Sanity check for invalid push token format.
         if not PushClient.is_exponent_push_token(self.to):
@@ -133,22 +136,28 @@ class PushMessage(
             payload['title'] = self.title
         if self.body is not None:
             payload['body'] = self.body
-        if self.sound is not None:
-            payload['sound'] = self.sound
         if self.ttl is not None:
             payload['ttl'] = self.ttl
         if self.expiration is not None:
             payload['expiration'] = self.expiration
         if self.priority is not None:
             payload['priority'] = self.priority
+        if self.subtitle is not None:
+            payload['subtitle'] = self.subtitle
+        if self.sound is not None:
+            payload['sound'] = self.sound
         if self.badge is not None:
             payload['badge'] = self.badge
-        if self.category is not None:
-            payload['_category'] = self.category
-        if self.display_in_foreground is not None:
-            payload['_displayInForeground'] = self.display_in_foreground
         if self.channel_id is not None:
             payload['channelId'] = self.channel_id
+        if self.category is not None:
+            payload['categoryId'] = self.category
+        if self.mutable_content is not None:
+            payload['mutableContent'] = self.mutable_content
+
+        # here for legacy reasons
+        if self.display_in_foreground is not None:
+            payload['_displayInForeground'] = self.display_in_foreground
         return payload
 
 
@@ -208,8 +217,7 @@ class PushTicket(
 
 
 class PushReceipt(
-    namedtuple('PushReceipt',
-               ['id', 'status', 'message', 'details'])):
+        namedtuple('PushReceipt', ['id', 'status', 'message', 'details'])):
     """Wrapper class for a PushReceipt response. Similar to a PushResponse
 
     A successful single push notification:
@@ -267,6 +275,7 @@ class PushClient(object):
     DEFAULT_HOST = "https://exp.host"
     DEFAULT_BASE_API_URL = "/--/api/v2"
     DEFAULT_MAX_MESSAGE_COUNT = 100
+    DEFAULT_MAX_RECEIPT_COUNT = 1000
 
     def __init__(self, host=None, api_url=None, **kwargs):
         """Construct a new PushClient object.
@@ -285,6 +294,8 @@ class PushClient(object):
 
         self.max_message_count = kwargs[
             'max_message_count'] if 'max_message_count' in kwargs else PushClient.DEFAULT_MAX_MESSAGE_COUNT
+        self.max_receipt_count = kwargs[
+            'max_receipt_count'] if 'max_receipt_count' in kwargs else PushClient.DEFAULT_MAX_RECEIPT_COUNT
         self.timeout = kwargs['timeout'] if 'timeout' in kwargs else None
 
     @classmethod
@@ -295,7 +306,7 @@ class PushClient(object):
         return (isinstance(token, six.string_types)
                 and token.startswith('ExponentPushToken'))
 
-    def _publish_internal(self, push_messages):
+    def _publish_internal(self, push_messages, session):
         """Send push notifications
 
         The server will validate any type of syntax errors and the client will
@@ -312,18 +323,10 @@ class PushClient(object):
         Args:
             push_messages: An array of PushMessage objects.
         """
-        # Delayed import because this file is immediately read on install, and
-        # the requests library may not be installed yet.
-        import requests
 
-        response = requests.post(
+        response = session.post(
             self.host + self.api_url + '/push/send',
             data=json.dumps([pm.get_payload() for pm in push_messages]),
-            headers={
-                'accept': 'application/json',
-                'accept-encoding': 'gzip, deflate',
-                'content-type': 'application/json',
-            },
             timeout=self.timeout)
 
         # Let's validate the response format first.
@@ -399,20 +402,58 @@ class PushClient(object):
            An array of PushTicket objects which contains the results.
         """
         push_tickets = []
+        session = requests.Session()
+        session.headers.update({
+            'accept': 'application/json',
+            'accept-encoding': 'gzip, deflate',
+            'content-type': 'application/json',
+        })
         for start in itertools.count(0, self.max_message_count):
             chunk = list(
                 itertools.islice(push_messages, start,
                                  start + self.max_message_count))
             if not chunk:
                 break
-            push_tickets.extend(self._publish_internal(chunk))
+            push_tickets.extend(self._publish_internal(chunk, session))
         return push_tickets
+
+    def check_receipts_multiple(self, push_tickets):
+        """
+        Check receipts in batches of 1000 as per expo docs
+        """
+        receipts = []
+        session = requests.Session()
+        session.headers.update({
+            'accept': 'application/json',
+            'accept-encoding': 'gzip, deflate',
+            'content-type': 'application/json',
+        })
+        for start in itertools.count(0, self.max_receipt_count):
+            chunk = list(
+                itertools.islice(push_tickets, start,
+                                 start + self.max_receipt_count))
+            if not chunk:
+                break
+            receipts.extend(self._check_receipts_internal(chunk, session))
+        return receipts
+
+    def _check_receipts_internal(self, push_tickets, session):
+        """
+        Helper function for check_receipts_multiple
+        """
+        response = session.post(
+            self.host + self.api_url + '/push/getReceipts',
+            data=json.dumps(
+                {'ids': [push_ticket.id for push_ticket in push_tickets]}),
+            timeout=self.timeout)
+
+        receipts = self.validate_and_get_receipts(response)
+        return receipts
 
     def check_receipts(self, push_tickets):
         """  Checks the push receipts of the given push tickets """
         # Delayed import because this file is immediately read on install, and
         # the requests library may not be installed yet.
-        import requests
         response = requests.post(
             self.host + self.api_url + '/push/getReceipts',
             data=json.dumps(
@@ -423,6 +464,13 @@ class PushClient(object):
                 'content-type': 'application/json',
             },
             timeout=self.timeout)
+        receipts = self.validate_and_get_receipts(response)
+        return receipts
+
+    def validate_and_get_receipts(self, response):
+        """
+        Validate and get receipts for requests
+        """
         # Let's validate the response format first.
         try:
             response_data = response.json()
@@ -456,9 +504,8 @@ class PushClient(object):
         for r_id, val in response_data.items():
             ret.append(
                 PushTicket(push_message=PushMessage(),
-                            status=val.get('status',
-                                           PushTicket.ERROR_STATUS),
-                            message=val.get('message', ''),
-                            details=val.get('details', None),
-                            id=r_id))
+                           status=val.get('status', PushTicket.ERROR_STATUS),
+                           message=val.get('message', ''),
+                           details=val.get('details', None),
+                           id=r_id))
         return ret

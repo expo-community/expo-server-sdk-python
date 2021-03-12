@@ -17,7 +17,7 @@ except IOError:
 
 setup(
     name='exponent_server_sdk',
-    version='1.0.3',
+    version='1.1.0',
     description='Expo Server SDK for Python',
     long_description=README,
     long_description_content_type='text/markdown',

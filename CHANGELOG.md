@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## 1.1 - 2021-03-14
+- Changed requests library to use Sessions
+- Used chunks for checking push receipts as per expo docs
+
 ## 1.0.3 - 2020-03-08
 - Fixed typo in previous release causing crash sending push tickets
 
