@@ -443,8 +443,7 @@ class PushClient(object):
         """
         response = session.post(
             self.host + self.api_url + '/push/getReceipts',
-            data=json.dumps(
-                {'ids': [push_ticket.id for push_ticket in push_tickets]}),
+            json={'ids': [push_ticket.id for push_ticket in push_tickets]},
             timeout=self.timeout)
 
         receipts = self.validate_and_get_receipts(response)
