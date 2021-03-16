@@ -283,6 +283,8 @@ class PushClient(object):
         Args:
             host: The server protocol, hostname, and port.
             api_url: The api url at the host.
+            session: Pass in your own requests.Session object if you prefer 
+                to customize
         """
         self.host = host
         if not self.host:
@@ -298,7 +300,8 @@ class PushClient(object):
             'max_receipt_count'] if 'max_receipt_count' in kwargs else PushClient.DEFAULT_MAX_RECEIPT_COUNT
         self.timeout = kwargs['timeout'] if 'timeout' in kwargs else None
 
-        if not session:
+        self.session = session
+        if not self.session:
             self.session = requests.Session()
             self.session.headers.update({
                 'accept': 'application/json',
