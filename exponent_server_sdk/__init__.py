@@ -277,7 +277,7 @@ class PushClient(object):
     DEFAULT_MAX_MESSAGE_COUNT = 100
     DEFAULT_MAX_RECEIPT_COUNT = 1000
 
-    def __init__(self, host=None, api_url=None, session, **kwargs):
+    def __init__(self, host=None, api_url=None, session=None, **kwargs):
         """Construct a new PushClient object.
 
         Args:
