@@ -433,7 +433,7 @@ class PushClient(object):
                                  start + self.max_receipt_count))
             if not chunk:
                 break
-            receipts.extend(self._check_receipts_internal(chunk, self.session))
+            receipts.extend(self._check_receipts_internal(chunk))
         return receipts
 
     def _check_receipts_internal(self, push_tickets):
