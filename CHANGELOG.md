@@ -6,14 +6,14 @@
 - Changed requests library to use Sessions
 - Used chunks for checking push receipts as per expo docs
 
-## 1.0.3 - 2020-03-08
+## 1.0.3 - 2021-03-08
 - Fixed typo in previous release causing crash sending push tickets
 
-## 1.0.2 - 2020-03-07
+## 1.0.2 - 2021-03-07
 - Renamed variables / classes to confirm with the expo documentation
 - This version will require code modifications (renaming of some classes)
 
-## 1.0.1 - 2020-02-15
+## 1.0.1 - 2021-02-15
 - Add support for push receipt InvalidCredentials error
 
 ## 1.0.0 - 2020-11-17
