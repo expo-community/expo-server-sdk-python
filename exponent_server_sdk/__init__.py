@@ -298,7 +298,7 @@ class PushClient(object):
             'max_receipt_count'] if 'max_receipt_count' in kwargs else PushClient.DEFAULT_MAX_RECEIPT_COUNT
         self.timeout = kwargs['timeout'] if 'timeout' in kwargs else None
 
-        if not self.session:
+        if not session:
             self.session = requests.Session()
             self.session.headers.update({
                 'accept': 'application/json',
