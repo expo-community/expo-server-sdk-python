@@ -277,7 +277,7 @@ class PushClient(object):
     DEFAULT_MAX_MESSAGE_COUNT = 100
     DEFAULT_MAX_RECEIPT_COUNT = 1000
 
-    def __init__(self, host=None, api_url=None, **kwargs):
+    def __init__(self, host=None, api_url=None, session, **kwargs):
         """Construct a new PushClient object.
 
         Args:
@@ -298,6 +298,14 @@ class PushClient(object):
             'max_receipt_count'] if 'max_receipt_count' in kwargs else PushClient.DEFAULT_MAX_RECEIPT_COUNT
         self.timeout = kwargs['timeout'] if 'timeout' in kwargs else None
 
+        if not self.session:
+            self.session = requests.Session()
+            self.session.headers.update({
+                'accept': 'application/json',
+                'accept-encoding': 'gzip, deflate',
+                'content-type': 'application/json',
+            })
+
     @classmethod
     def is_exponent_push_token(cls, token):
         """Returns `True` if the token is an Exponent push token"""
@@ -306,7 +314,7 @@ class PushClient(object):
         return (isinstance(token, six.string_types)
                 and token.startswith('ExponentPushToken'))
 
-    def _publish_internal(self, push_messages, session):
+    def _publish_internal(self, push_messages):
         """Send push notifications
 
         The server will validate any type of syntax errors and the client will
@@ -324,7 +332,7 @@ class PushClient(object):
             push_messages: An array of PushMessage objects.
         """
 
-        response = session.post(
+        response = self.session.post(
             self.host + self.api_url + '/push/send',
             data=json.dumps([pm.get_payload() for pm in push_messages]),
             timeout=self.timeout)
@@ -402,19 +410,13 @@ class PushClient(object):
            An array of PushTicket objects which contains the results.
         """
         push_tickets = []
-        session = requests.Session()
-        session.headers.update({
-            'accept': 'application/json',
-            'accept-encoding': 'gzip, deflate',
-            'content-type': 'application/json',
-        })
         for start in itertools.count(0, self.max_message_count):
             chunk = list(
                 itertools.islice(push_messages, start,
                                  start + self.max_message_count))
             if not chunk:
                 break
-            push_tickets.extend(self._publish_internal(chunk, session))
+            push_tickets.extend(self._publish_internal(chunk))
         return push_tickets
 
     def check_receipts_multiple(self, push_tickets):
@@ -422,26 +424,20 @@ class PushClient(object):
         Check receipts in batches of 1000 as per expo docs
         """
         receipts = []
-        session = requests.Session()
-        session.headers.update({
-            'accept': 'application/json',
-            'accept-encoding': 'gzip, deflate',
-            'content-type': 'application/json',
-        })
         for start in itertools.count(0, self.max_receipt_count):
             chunk = list(
                 itertools.islice(push_tickets, start,
                                  start + self.max_receipt_count))
             if not chunk:
                 break
-            receipts.extend(self._check_receipts_internal(chunk, session))
+            receipts.extend(self._check_receipts_internal(chunk, self.session))
         return receipts
 
-    def _check_receipts_internal(self, push_tickets, session):
+    def _check_receipts_internal(self, push_tickets):
         """
         Helper function for check_receipts_multiple
         """
-        response = session.post(
+        response = self.session.post(
             self.host + self.api_url + '/push/getReceipts',
             json={'ids': [push_ticket.id for push_ticket in push_tickets]},
             timeout=self.timeout)
