@@ -276,15 +276,18 @@ class PushClient(object):
     DEFAULT_BASE_API_URL = "/--/api/v2"
     DEFAULT_MAX_MESSAGE_COUNT = 100
     DEFAULT_MAX_RECEIPT_COUNT = 1000
+    DEFAULT_FORCE_FCM_V1 = False
 
-    def __init__(self, host=None, api_url=None, session=None, **kwargs):
+    def __init__(self, host=None, api_url=None, session=None, force_fcm_v1=None, **kwargs):
         """Construct a new PushClient object.
 
         Args:
             host: The server protocol, hostname, and port.
             api_url: The api url at the host.
-            session: Pass in your own requests.Session object if you prefer 
+            session: Pass in your own requests.Session object if you prefer
                 to customize
+            force_fcm_v1: If True, send Android notifications via FCM V1, regardless
+                of whether a valid credential exists.
         """
         self.host = host
         if not self.host:
@@ -293,6 +296,10 @@ class PushClient(object):
         self.api_url = api_url
         if not self.api_url:
             self.api_url = PushClient.DEFAULT_BASE_API_URL
+
+        self.force_fcm_v1 = force_fcm_v1
+        if not self.force_fcm_v1:
+            self.force_fcm_v1 = PushClient.DEFAULT_FORCE_FCM_V1
 
         self.max_message_count = kwargs[
             'max_message_count'] if 'max_message_count' in kwargs else PushClient.DEFAULT_MAX_MESSAGE_COUNT
@@ -335,8 +342,12 @@ class PushClient(object):
             push_messages: An array of PushMessage objects.
         """
 
+        url = self.host + self.api_url + '/push/send'
+        if self.force_fcm_v1:
+            url += '?useFcmV1=true'
+
         response = self.session.post(
-            self.host + self.api_url + '/push/send',
+            url,
             data=json.dumps([pm.get_payload() for pm in push_messages]),
             timeout=self.timeout)
 

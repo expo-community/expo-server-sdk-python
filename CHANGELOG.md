@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+## 2.1.0 - 2024-03-14
+- Added optional parameter force_fcm_v1 for PushClient initialization. If True, it will send Android notifications via FCM V1.
+
 ## 2.0.0 - 2021-03-17
 - Changed requests library to use Sessions
 - Used chunks for checking push receipts as per expo docs
