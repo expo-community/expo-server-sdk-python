@@ -2,6 +2,7 @@ from collections import namedtuple
 import json
 import itertools
 import requests
+from urllib.parse import urljoin, urlencode
 
 
 class PushTicketError(Exception):
@@ -276,7 +277,6 @@ class PushClient(object):
     DEFAULT_BASE_API_URL = "/--/api/v2"
     DEFAULT_MAX_MESSAGE_COUNT = 100
     DEFAULT_MAX_RECEIPT_COUNT = 1000
-    DEFAULT_FORCE_FCM_V1 = False
 
     def __init__(self, host=None, api_url=None, session=None, force_fcm_v1=None, **kwargs):
         """Construct a new PushClient object.
@@ -298,8 +298,6 @@ class PushClient(object):
             self.api_url = PushClient.DEFAULT_BASE_API_URL
 
         self.force_fcm_v1 = force_fcm_v1
-        if not self.force_fcm_v1:
-            self.force_fcm_v1 = PushClient.DEFAULT_FORCE_FCM_V1
 
         self.max_message_count = kwargs[
             'max_message_count'] if 'max_message_count' in kwargs else PushClient.DEFAULT_MAX_MESSAGE_COUNT
@@ -342,9 +340,10 @@ class PushClient(object):
             push_messages: An array of PushMessage objects.
         """
 
-        url = self.host + self.api_url + '/push/send'
-        if self.force_fcm_v1:
-            url += '?useFcmV1=true'
+        url = urljoin(self.host, self.api_url + '/push/send')
+        if self.force_fcm_v1 is not None:
+            query_params = {'useFcmV1': 'true' if self.force_fcm_v1 else 'false'}
+            url += '?' + urlencode(query_params)
 
         response = self.session.post(
             url,
