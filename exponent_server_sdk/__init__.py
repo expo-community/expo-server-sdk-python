@@ -335,6 +335,13 @@ class PushClient(object):
           'badge': 1,
           'data': {'any': 'json object'},
         }
+        or
+        {
+          'to': ['ExponentPushToken[xxx]', 'ExponentPushToken[yyy]'],
+          'body': 'This text gets display in the notification',
+          'badge': 1,
+          'data': {'any': 'json object'}, 
+        }
 
         Args:
             push_messages: An array of PushMessage objects.
@@ -378,11 +385,15 @@ class PushClient(object):
         response.raise_for_status()
 
         # Sanity check the response
-        if len(push_messages) != len(response_data['data']):
+        expected_data_length = 0
+        for push_message in push_messages:
+            expected_data_length += len(push_message.to) if isinstance(push_message.to, list) else 1
+        # Note : expected_data_length may exceed max_message_count
+        if expected_data_length != len(response_data['data']):
             raise PushServerError(
                 ('Mismatched response length. Expected %d %s but only '
                  'received %d' %
-                 (len(push_messages), 'receipt' if len(push_messages) == 1 else
+                 (expected_data_length, 'receipt' if expected_data_length == 1 else
                   'receipts', len(response_data['data']))),
                 response,
                 response_data=response_data)
@@ -411,6 +422,9 @@ class PushClient(object):
         Returns:
            A PushTicket object which contains the results.
         """
+        if isinstance(push_message.to, list) and len(push_message.to) > 1:
+            raise ValueError("Sending notification to multiple recipients is not allowed \
+                             with publish method. Use publish_multiple method instead.")
         return self.publish_multiple([push_message])[0]
 
     def publish_multiple(self, push_messages):
@@ -424,6 +438,9 @@ class PushClient(object):
         """
         push_tickets = []
         for start in itertools.count(0, self.max_message_count):
+            # Todo : Check if len(push_message.to) check is required here as well
+            # If yes : We will divide the push_message with len(to) > max_message_count
+            # into multiple push messages. 
             chunk = list(
                 itertools.islice(push_messages, start,
                                  start + self.max_message_count))
