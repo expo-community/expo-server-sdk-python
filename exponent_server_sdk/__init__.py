@@ -511,9 +511,11 @@ class PushClient(object):
         ret = []
         for r_id, val in response_data.items():
             ret.append(
-                PushTicket(push_message=PushMessage(),
-                           status=val.get('status', PushTicket.ERROR_STATUS),
-                           message=val.get('message', ''),
-                           details=val.get('details', None),
-                           id=r_id))
+                PushReceipt(
+                    status=val.get('status', PushReceipt.ERROR_STATUS),
+                    message=val.get('message', ''),
+                    details=val.get('details', None),
+                    id=r_id
+                )
+            )
         return ret
